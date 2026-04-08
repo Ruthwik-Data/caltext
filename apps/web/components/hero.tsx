@@ -49,9 +49,9 @@ export function Hero() {
                   height={28}
                   className="rounded-full border border-bg/80 object-cover"
                   style={{ width: 28, height: 28 }}
-                  initial={{ opacity: 0, scale: 0.6, filter: "blur(4px) grayscale(1)" }}
-                  animate={{ opacity: 1, scale: 1, filter: "blur(0px) grayscale(1)" }}
-                  exit={{ opacity: 0, scale: 0.6, filter: "blur(4px) grayscale(1)" }}
+                  initial={{ opacity: 0, scale: 0.6, filter: "blur(4px) saturate(0.3)" }}
+                  animate={{ opacity: 1, scale: 1, filter: "blur(0px) saturate(0.3)" }}
+                  exit={{ opacity: 0, scale: 0.6, filter: "blur(4px) saturate(0.3)" }}
                   transition={{ duration: 0.4, ease: "easeInOut" }}
                 />
               ))}
