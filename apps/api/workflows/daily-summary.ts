@@ -2,19 +2,19 @@ import { Chat } from "chat";
 import { generateText } from "ai";
 import { openai } from "@ai-sdk/openai";
 import { getUser, getDailyLog, updateStreak } from "@caltext/db";
-import { localDateString } from "@caltext/shared";
+import { localDateString, decrypt } from "@caltext/shared";
 import { buildDailySummaryPrompt } from "@caltext/ai";
 
-async function generateAndSend(phone: string) {
+async function generateAndSend(userId: string) {
   "use step";
-  const user = await getUser(phone);
+  const user = await getUser(userId);
   if (!user) return;
 
   const localDate = localDateString(user.timezone);
-  const log = await getDailyLog(phone, localDate);
+  const log = await getDailyLog(userId, localDate);
   if (log.mealCount === 0) return;
 
-  const streak = await updateStreak(phone, localDate);
+  const streak = await updateStreak(userId, localDate);
 
   const mealSummary = log.meals.map(m => {
     const itemNames = m.items.map(i => i.name).join(" + ");
@@ -30,12 +30,13 @@ Totals: ${log.calories} kcal, ${Math.round(log.protein)}g P, ${Math.round(log.ca
 Streak: ${streak.current} days`,
   });
 
+  const rawPhone = decrypt(user.phone);
   const bot = Chat.getSingleton();
-  const dm = await bot.openDM(`sendblue:${phone}`);
+  const dm = await bot.openDM(`sendblue:${rawPhone}`);
   await dm.post(result.text);
 }
 
-export async function dailySummaryWorkflow(phone: string) {
+export async function dailySummaryWorkflow(userId: string) {
   "use workflow";
-  await generateAndSend(phone);
+  await generateAndSend(userId);
 }

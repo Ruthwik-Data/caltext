@@ -6,7 +6,7 @@ import {
   getUser, getDailyLog, getStreak, updateStreak, getWeeklyLogs,
 } from "@caltext/db";
 import {
-  nextLocalTime, msUntil, localDateString, isDayOfWeek,
+  nextLocalTime, msUntil, localDateString, isDayOfWeek, decrypt,
   MEAL_TIMES, DAILY_SUMMARY_HOUR, WEEKLY_RECAP_HOUR, WEEKLY_RECAP_DAY,
   STREAK_MILESTONES,
 } from "@caltext/shared";
@@ -15,15 +15,17 @@ import {
   buildReminderPrompt, buildDailySummaryPrompt, buildWeeklyRecapPrompt,
 } from "@caltext/ai";
 
-async function sendMsg(phone: string, text: string) {
+async function sendMsg(userId: string, text: string) {
   "use step";
+  const user = await getUser(userId);
+  if (!user) return;
+  const rawPhone = decrypt(user.phone);
   const bot = Chat.getSingleton();
-  const dm = await bot.openDM(`sendblue:${phone}`);
+  const dm = await bot.openDM(`sendblue:${rawPhone}`);
   await dm.post(text);
 }
 
 async function generateReminder(
-  _phone: string,
   mealLabel: string,
   mealEmoji: string,
   locale: string,
@@ -40,18 +42,18 @@ async function generateReminder(
 }
 
 async function generateDailySummary(
-  phone: string,
+  userId: string,
   locale: string,
 ): Promise<{ text: string; streak: StreakInfo } | null> {
   "use step";
-  const user = await getUser(phone);
+  const user = await getUser(userId);
   if (!user) return null;
 
   const localDate = localDateString(user.timezone);
-  const log = await getDailyLog(phone, localDate);
+  const log = await getDailyLog(userId, localDate);
   if (log.mealCount === 0) return null;
 
-  const updatedStreak = await updateStreak(phone, localDate);
+  const updatedStreak = await updateStreak(userId, localDate);
 
   const mealSummary = log.meals.map(m => {
     const itemNames = m.items.map(i => i.name).join(" + ");
@@ -73,13 +75,13 @@ ${log.calories <= user.dailyCalorieTarget ? `${user.dailyCalorieTarget - log.cal
   return { text: result.text, streak: updatedStreak };
 }
 
-async function generateWeeklyRecap(phone: string, locale: string): Promise<string | null> {
+async function generateWeeklyRecap(userId: string, locale: string): Promise<string | null> {
   "use step";
-  const user = await getUser(phone);
+  const user = await getUser(userId);
   if (!user) return null;
 
   const localDate = localDateString(user.timezone);
-  const weeklyLogs = await getWeeklyLogs(phone, localDate, user.timezone);
+  const weeklyLogs = await getWeeklyLogs(userId, localDate, user.timezone);
 
   const dayLines = weeklyLogs.map(({ date, log }) => {
     const ratio = Math.min(log.calories / user.dailyCalorieTarget, 1.5);
@@ -111,11 +113,11 @@ Days on target: ${daysOnTarget}/7`,
   return result.text;
 }
 
-export async function reminderLoop(phone: string) {
+export async function reminderLoop(userId: string) {
   "use workflow";
 
   while (true) {
-    const user = await getUser(phone);
+    const user = await getUser(userId);
     if (!user) break;
 
     const tz = user.timezone;
@@ -129,7 +131,7 @@ export async function reminderLoop(phone: string) {
       }
 
       const localDate = localDateString(tz);
-      const log = await getDailyLog(phone, localDate);
+      const log = await getDailyLog(userId, localDate);
       const remaining = Math.max(0, user.dailyCalorieTarget - log.calories);
 
       const alreadyLogged = log.meals.some(m => {
@@ -138,8 +140,8 @@ export async function reminderLoop(phone: string) {
       });
 
       if (log.mealCount === 0 || !alreadyLogged) {
-        const reminder = await generateReminder(phone, meal.label, meal.emoji, locale, remaining, user.name);
-        await sendMsg(phone, reminder);
+        const reminder = await generateReminder(meal.label, meal.emoji, locale, remaining, user.name);
+        await sendMsg(userId, reminder);
       }
     }
 
@@ -149,13 +151,13 @@ export async function reminderLoop(phone: string) {
       await sleep(`${summaryWait}ms`);
     }
 
-    const summaryResult = await generateDailySummary(phone, locale);
+    const summaryResult = await generateDailySummary(userId, locale);
     if (summaryResult) {
-      await sendMsg(phone, summaryResult.text);
+      await sendMsg(userId, summaryResult.text);
 
       const milestoneMsg = STREAK_MILESTONES[summaryResult.streak.current];
       if (milestoneMsg) {
-        await sendMsg(phone, milestoneMsg);
+        await sendMsg(userId, milestoneMsg);
       }
     }
 
@@ -166,9 +168,9 @@ export async function reminderLoop(phone: string) {
         await sleep(`${recapWait}ms`);
       }
 
-      const recap = await generateWeeklyRecap(phone, locale);
+      const recap = await generateWeeklyRecap(userId, locale);
       if (recap) {
-        await sendMsg(phone, recap);
+        await sendMsg(userId, recap);
       }
     }
   }

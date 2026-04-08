@@ -1,5 +1,6 @@
 import { Hono } from "hono";
 import type { Thread, Message } from "chat";
+import { encrypt } from "@caltext/shared";
 import bot from "./bot.js";
 import { routeMessage } from "./router.js";
 
@@ -12,14 +13,15 @@ app.post("/webhooks/sendblue", async (c) => {
 });
 
 async function handleIncoming(thread: Thread, message: Message) {
-  const phone = thread.id.split(":")[1] ?? "";
+  const rawPhone = thread.id.split(":")[1] ?? "";
+  const encryptedPhone = encrypt(rawPhone);
   const text = message.text ?? "";
   const imageUrl = message.attachments?.[0]?.url;
 
   await thread.startTyping();
 
   try {
-    const result = await routeMessage(phone, text, imageUrl);
+    const result = await routeMessage(encryptedPhone, text, imageUrl);
     if (!result.startsWith("__")) {
       await thread.post(result);
     }

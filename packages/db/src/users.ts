@@ -1,14 +1,26 @@
 import { getRedis } from "./client.js";
 import type { UserProfile } from "@caltext/shared";
 
-const userKey = (phone: string) => `user:${phone}`;
+const userKey = (userId: string) => `user:${userId}`;
+const phoneIndexKey = (encryptedPhone: string) => `phone:${encryptedPhone}`;
 
-export async function getUser(phone: string): Promise<UserProfile | null> {
+export async function resolveUserId(encryptedPhone: string): Promise<string | null> {
   const redis = getRedis();
-  const data = await redis.hgetall<Record<string, string>>(userKey(phone));
+  return await redis.get<string>(phoneIndexKey(encryptedPhone));
+}
+
+export async function createPhoneMapping(encryptedPhone: string, userId: string): Promise<void> {
+  const redis = getRedis();
+  await redis.set(phoneIndexKey(encryptedPhone), userId);
+}
+
+export async function getUser(userId: string): Promise<UserProfile | null> {
+  const redis = getRedis();
+  const data = await redis.hgetall<Record<string, string>>(userKey(userId));
   if (!data || Object.keys(data).length === 0) return null;
   return {
-    phone,
+    id: userId,
+    phone: data.phone ?? "",
     name: data.name ?? "",
     locale: data.locale ?? "en",
     timezone: data.timezone ?? "UTC",
@@ -25,9 +37,14 @@ export async function getUser(phone: string): Promise<UserProfile | null> {
   };
 }
 
-export async function createUser(phone: string, profile: Omit<UserProfile, "phone" | "createdAt">): Promise<void> {
+export async function createUser(
+  userId: string,
+  encryptedPhone: string,
+  profile: Omit<UserProfile, "id" | "phone" | "createdAt">,
+): Promise<void> {
   const redis = getRedis();
-  await redis.hset(userKey(phone), {
+  await redis.hset(userKey(userId), {
+    phone: encryptedPhone,
     ...profile,
     onboardingComplete: String(profile.onboardingComplete),
     dailyCalorieTarget: String(profile.dailyCalorieTarget),
@@ -38,12 +55,12 @@ export async function createUser(phone: string, profile: Omit<UserProfile, "phon
   });
 }
 
-export async function updateUser(phone: string, fields: Partial<Record<string, string>>): Promise<void> {
+export async function updateUser(userId: string, fields: Partial<Record<string, string>>): Promise<void> {
   const redis = getRedis();
-  await redis.hset(userKey(phone), fields);
+  await redis.hset(userKey(userId), fields);
 }
 
-export async function userExists(phone: string): Promise<boolean> {
+export async function userExists(userId: string): Promise<boolean> {
   const redis = getRedis();
-  return await redis.exists(userKey(phone)) === 1;
+  return await redis.exists(userKey(userId)) === 1;
 }

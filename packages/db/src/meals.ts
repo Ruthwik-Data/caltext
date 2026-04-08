@@ -2,13 +2,13 @@ import { getRedis } from "./client.js";
 import type { MealEntry } from "@caltext/shared";
 
 const mealKey = (id: string) => `meal:${id}`;
-const mealsIndexKey = (phone: string, localDate: string) => `meals:${phone}:${localDate}`;
+const mealsIndexKey = (userId: string, localDate: string) => `meals:${userId}:${localDate}`;
 
 export async function saveMeal(meal: MealEntry): Promise<void> {
   const redis = getRedis();
   const pipeline = redis.pipeline();
   pipeline.hset(mealKey(meal.id), {
-    phone: meal.phone,
+    userId: meal.userId,
     items: JSON.stringify(meal.items),
     totalCalories: String(meal.totalCalories),
     totalProtein: String(meal.totalProtein),
@@ -20,16 +20,16 @@ export async function saveMeal(meal: MealEntry): Promise<void> {
     timestamp: meal.timestamp,
     localDate: meal.localDate,
   });
-  pipeline.zadd(mealsIndexKey(meal.phone, meal.localDate), {
+  pipeline.zadd(mealsIndexKey(meal.userId, meal.localDate), {
     score: new Date(meal.timestamp).getTime(),
     member: meal.id,
   });
   await pipeline.exec();
 }
 
-export async function getMealsForDate(phone: string, localDate: string): Promise<MealEntry[]> {
+export async function getMealsForDate(userId: string, localDate: string): Promise<MealEntry[]> {
   const redis = getRedis();
-  const mealIds = await redis.zrange<string[]>(mealsIndexKey(phone, localDate), 0, -1);
+  const mealIds = await redis.zrange<string[]>(mealsIndexKey(userId, localDate), 0, -1);
   if (!mealIds || mealIds.length === 0) return [];
 
   const meals: MealEntry[] = [];
@@ -38,7 +38,7 @@ export async function getMealsForDate(phone: string, localDate: string): Promise
     if (!data || Object.keys(data).length === 0) continue;
     meals.push({
       id,
-      phone: data.phone ?? phone,
+      userId: data.userId ?? userId,
       items: JSON.parse(data.items ?? "[]"),
       totalCalories: parseInt(data.totalCalories ?? "0", 10),
       totalProtein: parseFloat(data.totalProtein ?? "0"),

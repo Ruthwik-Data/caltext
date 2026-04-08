@@ -6,7 +6,7 @@ import { localDateString } from "@caltext/shared";
 export const logMeal = tool({
   description: "Log a meal entry with nutrition data to the user's daily log. Call this after identifying food and looking up nutrition.",
   inputSchema: z.object({
-    phone: z.string(),
+    userId: z.string(),
     timezone: z.string(),
     items: z.array(z.object({
       name: z.string(),
@@ -27,7 +27,7 @@ export const logMeal = tool({
     photoUrl: z.string().optional(),
     source: z.enum(["photo", "text", "manual"]),
   }),
-  execute: async ({ phone, timezone, items, photoUrl, source }) => {
+  execute: async ({ userId, timezone, items, photoUrl, source }) => {
     const localDate = localDateString(timezone);
     const id = `meal_${Date.now()}_${Math.random().toString(36).slice(2, 8)}`;
 
@@ -39,7 +39,7 @@ export const logMeal = tool({
 
     await saveMeal({
       id,
-      phone,
+      userId,
       items,
       totalCalories,
       totalProtein,
@@ -52,7 +52,7 @@ export const logMeal = tool({
       localDate,
     });
 
-    await updateDailyTotals(phone, localDate, totalCalories, totalProtein, totalCarbs, totalFat, totalFiber);
+    await updateDailyTotals(userId, localDate, totalCalories, totalProtein, totalCarbs, totalFat, totalFiber);
 
     return {
       mealId: id,

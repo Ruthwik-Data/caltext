@@ -8,21 +8,22 @@ import {
   createUser, setOnboardingState, deleteOnboardingState,
   setReminderRunId,
 } from "@caltext/db";
-import { calculateTDEE, getTimezoneCity } from "@caltext/shared";
+import { calculateTDEE, getTimezoneCity, decrypt } from "@caltext/shared";
 import { reminderLoop } from "./reminder-loop.js";
 
-async function sendMessage(phone: string, text: string) {
+async function sendMessage(userId: string, encryptedPhone: string, text: string) {
   "use step";
+  const rawPhone = decrypt(encryptedPhone);
   const bot = Chat.getSingleton();
-  const dm = await bot.openDM(`sendblue:${phone}`);
+  const dm = await bot.openDM(`sendblue:${rawPhone}`);
   await dm.post(text);
 }
 
-async function askAndWait(phone: string, question: string): Promise<string> {
-  await sendMessage(phone, question);
+async function askAndWait(userId: string, encryptedPhone: string, question: string): Promise<string> {
+  await sendMessage(userId, encryptedPhone, question);
   const webhook = createWebhook();
 
-  await setOnboardingState(phone, { webhookUrl: webhook.url });
+  await setOnboardingState(userId, { webhookUrl: webhook.url });
 
   const request = await webhook;
   const body = (await request.json()) as { text?: string };
@@ -71,7 +72,8 @@ function parseActivity(text: string): ActivityLevel {
 }
 
 async function saveUser(
-  phone: string,
+  userId: string,
+  encryptedPhone: string,
   name: string,
   locale: string,
   timezone: string,
@@ -82,7 +84,7 @@ async function saveUser(
   target: number,
 ) {
   "use step";
-  await createUser(phone, {
+  await createUser(userId, encryptedPhone, {
     name,
     locale,
     timezone,
@@ -96,11 +98,12 @@ async function saveUser(
     weightKg: body.weightKg,
     onboardingComplete: true,
   });
-  await deleteOnboardingState(phone);
+  await deleteOnboardingState(userId);
 }
 
 export async function onboardingWorkflow(
-  phone: string,
+  userId: string,
+  encryptedPhone: string,
   locale: string,
   timezone: string,
   country: string,
@@ -108,20 +111,22 @@ export async function onboardingWorkflow(
 ) {
   "use workflow";
 
-  await setOnboardingState(phone, { step: "await_name" });
+  await setOnboardingState(userId, { step: "await_name" });
 
   const nameReply = await askAndWait(
-    phone,
+    userId,
+    encryptedPhone,
     locale === "sv"
       ? "Hej! 👋 Jag är Caltext, din kaloritracker. Vad heter du?"
       : "Hey! 👋 I'm Caltext, your calorie tracking buddy. What's your name?"
   );
   const name = nameReply.trim().split(" ")[0] ?? nameReply.trim();
 
-  await setOnboardingState(phone, { step: "await_timezone", name });
+  await setOnboardingState(userId, { step: "await_timezone", name });
   const tzCity = getTimezoneCity(timezone);
   const tzReply = await askAndWait(
-    phone,
+    userId,
+    encryptedPhone,
     locale === "sv"
       ? `Kul att träffas, ${name}! 🎉 Jag gissar att du är i ${tzCity}-tid -- stämmer det?`
       : `Nice to meet you, ${name}! 🎉 I'm guessing you're on ${tzCity} time -- is that right?`
@@ -131,11 +136,12 @@ export async function onboardingWorkflow(
     ? tzReply.replace(/no|nej|nope|nah/gi, "").trim() || timezone
     : timezone;
 
-  await setOnboardingState(phone, { step: "await_body", timezone: confirmedTz });
+  await setOnboardingState(userId, { step: "await_body", timezone: confirmedTz });
   let bodyStats: BodyStats | null = null;
   while (!bodyStats) {
     const bodyReply = await askAndWait(
-      phone,
+      userId,
+      encryptedPhone,
       locale === "sv"
         ? `Toppen! För att räkna ut ditt kalorimål behöver jag veta lite om dig. Kön, ålder, längd och vikt? 📏`
         : `Great! To set your calorie target, I need a few details. Sex, age, height, and weight? 📏`
@@ -143,7 +149,8 @@ export async function onboardingWorkflow(
     bodyStats = await parseBodyStats(bodyReply);
     if (!bodyStats) {
       await sendMessage(
-        phone,
+        userId,
+        encryptedPhone,
         locale === "sv"
           ? "Hmm, jag kunde inte tolka det. Kan du skriva t.ex. 'man, 28 år, 180cm, 75kg'?"
           : "Hmm, I couldn't parse that. Try something like 'male, 28, 180cm, 75kg' or '5'11, 165lbs, female, 25'"
@@ -151,7 +158,7 @@ export async function onboardingWorkflow(
     }
   }
 
-  await setOnboardingState(phone, {
+  await setOnboardingState(userId, {
     step: "await_goal",
     sex: bodyStats.sex,
     age: bodyStats.age,
@@ -159,16 +166,18 @@ export async function onboardingWorkflow(
     weightKg: bodyStats.weightKg,
   });
   const goalReply = await askAndWait(
-    phone,
+    userId,
+    encryptedPhone,
     locale === "sv"
       ? "Vad är ditt mål -- gå ner i vikt, behålla vikten, eller bygga muskler? 🎯"
       : "What's your goal -- lose weight, maintain, or gain muscle? 🎯"
   );
   const goal = parseGoal(goalReply);
 
-  await setOnboardingState(phone, { step: "await_activity", goal });
+  await setOnboardingState(userId, { step: "await_activity", goal });
   const activityReply = await askAndWait(
-    phone,
+    userId,
+    encryptedPhone,
     locale === "sv"
       ? "Hur aktiv är du? Stillasittande, lätt aktiv, måttligt aktiv, aktiv, eller mycket aktiv? 🏃"
       : "How active are you? Sedentary, lightly active, moderately active, active, or very active? 🏃"
@@ -177,9 +186,10 @@ export async function onboardingWorkflow(
 
   const target = calculateTDEE(bodyStats.sex, bodyStats.weightKg, bodyStats.heightCm, bodyStats.age, activity, goal);
 
-  await setOnboardingState(phone, { step: "await_confirm", activity, calculatedTarget: target });
+  await setOnboardingState(userId, { step: "await_confirm", activity, calculatedTarget: target });
   const confirmReply = await askAndWait(
-    phone,
+    userId,
+    encryptedPhone,
     locale === "sv"
       ? `Baserat på vad du berättat föreslår jag ${target.toLocaleString()} kcal/dag. Låter det bra, eller vill du justera? ⚙️`
       : `Based on what you told me, I'd suggest ${target.toLocaleString()} kcal/day. Sound good, or want to adjust? ⚙️`
@@ -192,15 +202,16 @@ export async function onboardingWorkflow(
     if (parsed >= 1000 && parsed <= 5000) finalTarget = parsed;
   }
 
-  await saveUser(phone, name, locale, confirmedTz, country, bodyStats, goal, activity, finalTarget);
+  await saveUser(userId, encryptedPhone, name, locale, confirmedTz, country, bodyStats, goal, activity, finalTarget);
 
   await sendMessage(
-    phone,
+    userId,
+    encryptedPhone,
     locale === "sv"
       ? `Perfekt! Du är redo 🚀 Ditt dagliga mål: ${finalTarget.toLocaleString()} kcal. Skicka en bild på din mat eller skriv vad du ätit så loggar jag det! 📸`
       : `You're all set! 🚀 Your daily target: ${finalTarget.toLocaleString()} kcal. Send me a photo of your food or just text what you had -- I'll log it! 📸`
   );
 
-  const run = await start(reminderLoop, [phone]);
-  await setReminderRunId(phone, run.runId);
+  const run = await start(reminderLoop, [userId]);
+  await setReminderRunId(userId, run.runId);
 }

@@ -1,11 +1,11 @@
 import { getRedis } from "./client.js";
 import type { StreakInfo } from "@caltext/shared";
 
-const streakKey = (phone: string) => `streak:${phone}`;
+const streakKey = (userId: string) => `streak:${userId}`;
 
-export async function getStreak(phone: string): Promise<StreakInfo> {
+export async function getStreak(userId: string): Promise<StreakInfo> {
   const redis = getRedis();
-  const data = await redis.hgetall<Record<string, string>>(streakKey(phone));
+  const data = await redis.hgetall<Record<string, string>>(streakKey(userId));
   return {
     current: parseInt(data?.current ?? "0", 10),
     longest: parseInt(data?.longest ?? "0", 10),
@@ -13,9 +13,9 @@ export async function getStreak(phone: string): Promise<StreakInfo> {
   };
 }
 
-export async function updateStreak(phone: string, todayLocalDate: string): Promise<StreakInfo> {
+export async function updateStreak(userId: string, todayLocalDate: string): Promise<StreakInfo> {
   const redis = getRedis();
-  const streak = await getStreak(phone);
+  const streak = await getStreak(userId);
 
   if (streak.lastLogDate === todayLocalDate) {
     return streak;
@@ -34,7 +34,7 @@ export async function updateStreak(phone: string, todayLocalDate: string): Promi
 
   const newLongest = Math.max(streak.longest, newCurrent);
 
-  await redis.hset(streakKey(phone), {
+  await redis.hset(streakKey(userId), {
     current: String(newCurrent),
     longest: String(newLongest),
     lastLogDate: todayLocalDate,

@@ -1,5 +1,5 @@
 export { getRedis } from "./client.js";
-export { getUser, createUser, updateUser, userExists } from "./users.js";
+export { resolveUserId, createPhoneMapping, getUser, createUser, updateUser, userExists } from "./users.js";
 export { saveMeal, getMealsForDate } from "./meals.js";
 export { updateDailyTotals, getDailyLog, getWeeklyLogs } from "./daily-log.js";
 export { saveMemory, recallAllMemories, recallMemory, deleteMemory } from "./memory.js";

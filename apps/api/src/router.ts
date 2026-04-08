@@ -1,23 +1,38 @@
-import { userExists, getUser, getOnboardingState } from "@caltext/db";
-import { detectRegion } from "@caltext/shared";
+import {
+  resolveUserId, createPhoneMapping, getUser, getOnboardingState,
+} from "@caltext/db";
+import { detectRegion, decrypt, generateId } from "@caltext/shared";
 import { start } from "workflow/api";
 import { onboardingWorkflow } from "../workflows/onboarding.js";
 import { handleMessage } from "../workflows/handle-message.js";
 
-export async function routeMessage(phone: string, text: string, imageUrl?: string): Promise<string> {
-  const exists = await userExists(phone);
+export async function routeMessage(
+  encryptedPhone: string,
+  text: string,
+  imageUrl?: string,
+): Promise<string> {
+  const userId = await resolveUserId(encryptedPhone);
 
-  if (!exists) {
-    const region = detectRegion(phone);
-    await start(onboardingWorkflow, [phone, region.locale, region.timezone, region.country, region.countryName]);
+  if (!userId) {
+    const newId = generateId();
+    await createPhoneMapping(encryptedPhone, newId);
+    const region = detectRegion(decrypt(encryptedPhone));
+    await start(onboardingWorkflow, [
+      newId,
+      encryptedPhone,
+      region.locale,
+      region.timezone,
+      region.country,
+      region.countryName,
+    ]);
     return "__onboarding_started__";
   }
 
-  const user = await getUser(phone);
+  const user = await getUser(userId);
   if (!user) return "Something went wrong. Try messaging me again!";
 
   if (!user.onboardingComplete) {
-    const onboardingState = await getOnboardingState(phone);
+    const onboardingState = await getOnboardingState(userId);
     if (onboardingState?.webhookUrl) {
       try {
         await fetch(onboardingState.webhookUrl, {
@@ -33,6 +48,6 @@ export async function routeMessage(phone: string, text: string, imageUrl?: strin
     return "Let me restart your setup. What's your name?";
   }
 
-  await start(handleMessage, [phone, text, imageUrl]);
+  await start(handleMessage, [userId, text, imageUrl]);
   return "__assistant_started__";
 }

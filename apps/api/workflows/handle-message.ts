@@ -6,25 +6,25 @@ import {
   createCaltextAgent, buildSystemPrompt,
 } from "@caltext/ai";
 import {
-  localDateString, getLocaleName,
+  localDateString, getLocaleName, decrypt,
 } from "@caltext/shared";
 import type { AgentContext } from "@caltext/shared";
 import type { UserModelMessage } from "ai";
 
-async function loadContext(phone: string) {
+async function loadContext(userId: string) {
   "use step";
-  const user = await getUser(phone);
-  if (!user) throw new Error(`User not found: ${phone}`);
+  const user = await getUser(userId);
+  if (!user) throw new Error(`User not found: ${userId}`);
 
   const localDate = localDateString(user.timezone);
   const [memories, streak, todayLog] = await Promise.all([
-    recallAllMemories(phone),
-    getStreak(phone),
-    getDailyLog(phone, localDate),
+    recallAllMemories(userId),
+    getStreak(userId),
+    getDailyLog(userId, localDate),
   ]);
 
   const ctx: AgentContext = {
-    phone,
+    userId,
     userName: user.name,
     localeName: getLocaleName(user.locale),
     locale: user.locale,
@@ -59,26 +59,29 @@ async function runAgent(systemPrompt: string, userMessage: string, imageUrl?: st
   return result.text;
 }
 
-async function sendReply(phone: string, text: string) {
+async function sendReply(userId: string, text: string) {
   "use step";
+  const user = await getUser(userId);
+  if (!user) return;
+  const rawPhone = decrypt(user.phone);
   const bot = Chat.getSingleton();
-  const dm = await bot.openDM(`sendblue:${phone}`);
+  const dm = await bot.openDM(`sendblue:${rawPhone}`);
   await dm.post(text);
 }
 
-export async function handleMessage(phone: string, text: string, imageUrl?: string) {
+export async function handleMessage(userId: string, text: string, imageUrl?: string) {
   "use workflow";
 
-  const ctx = await loadContext(phone);
+  const ctx = await loadContext(userId);
   const systemPrompt = buildSystemPrompt(ctx);
 
   const userMessage = imageUrl
-    ? `${text}\n\n[The user sent a food photo. Use identifyFood with imageUrl "${imageUrl}" to analyze it, then lookupNutrition for each item, then logMeal to save. My phone is ${phone} and timezone is ${ctx.timezone}.]`
-    : `${text}\n\n[My phone is ${phone} and timezone is ${ctx.timezone}. Today's date is ${localDateString(ctx.timezone)}.]`;
+    ? `${text}\n\n[The user sent a food photo. Use identifyFood with imageUrl "${imageUrl}" to analyze it, then lookupNutrition for each item, then logMeal to save. userId is ${userId} and timezone is ${ctx.timezone}.]`
+    : `${text}\n\n[userId is ${userId} and timezone is ${ctx.timezone}. Today's date is ${localDateString(ctx.timezone)}.]`;
 
   const reply = await runAgent(systemPrompt, userMessage, imageUrl);
 
   if (reply) {
-    await sendReply(phone, reply);
+    await sendReply(userId, reply);
   }
 }

@@ -1,5 +1,6 @@
 import { tool } from "ai";
 import { z } from "zod";
+import { env } from "@caltext/shared";
 import type { NutritionInfo } from "@caltext/shared";
 
 const USDA_BASE = "https://api.nal.usda.gov/fdc/v1";
@@ -32,7 +33,7 @@ export const lookupNutrition = tool({
     preparationMethod: z.string().optional().describe("How the food is prepared, to refine the search"),
   }),
   execute: async ({ foodName, grams, preparationMethod }): Promise<NutritionInfo> => {
-    const apiKey = process.env.USDA_API_KEY;
+    const apiKey = env.USDA_API_KEY;
     const query = preparationMethod ? `${foodName}, ${preparationMethod}` : foodName;
 
     try {

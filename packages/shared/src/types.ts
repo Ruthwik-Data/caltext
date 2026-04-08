@@ -1,5 +1,6 @@
 export interface UserProfile {
-  phone: string;
+  id: string;             // generated user ID, e.g. "usr_a7x2k9m"
+  phone: string;          // encrypted phone (for Sendblue reverse lookup)
   name: string;
   locale: string;         // BCP-47 language tag, e.g. "sv", "en", "pt-BR"
   timezone: string;       // IANA timezone, e.g. "Europe/Stockholm"
@@ -39,7 +40,7 @@ export interface MealItem extends FoodItem {
 
 export interface MealEntry {
   id: string;
-  phone: string;
+  userId: string;
   items: MealItem[];
   totalCalories: number;
   totalProtein: number;
@@ -83,7 +84,7 @@ export interface OnboardingState {
 }
 
 export interface AgentContext {
-  phone: string;
+  userId: string;
   userName: string;
   localeName: string;     // human-readable language name
   locale: string;

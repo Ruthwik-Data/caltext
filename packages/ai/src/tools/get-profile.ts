@@ -5,9 +5,9 @@ import { getUser } from "@caltext/db";
 export const getUserProfile = tool({
   description: "Get the user's profile including name, calorie target, goals, and preferences.",
   inputSchema: z.object({
-    phone: z.string(),
+    userId: z.string(),
   }),
-  execute: async ({ phone }) => {
-    return await getUser(phone);
+  execute: async ({ userId }) => {
+    return await getUser(userId);
   },
 });

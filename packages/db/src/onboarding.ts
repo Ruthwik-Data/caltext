@@ -1,12 +1,12 @@
 import { getRedis } from "./client.js";
 import type { OnboardingState } from "@caltext/shared";
 
-const onboardingKey = (phone: string) => `onboarding:${phone}`;
+const onboardingKey = (userId: string) => `onboarding:${userId}`;
 const TTL_24H = 60 * 60 * 24;
 
-export async function getOnboardingState(phone: string): Promise<OnboardingState | null> {
+export async function getOnboardingState(userId: string): Promise<OnboardingState | null> {
   const redis = getRedis();
-  const data = await redis.hgetall<Record<string, string>>(onboardingKey(phone));
+  const data = await redis.hgetall<Record<string, string>>(onboardingKey(userId));
   if (!data || !data.step) return null;
   return {
     step: data.step as OnboardingState["step"],
@@ -23,17 +23,17 @@ export async function getOnboardingState(phone: string): Promise<OnboardingState
   };
 }
 
-export async function setOnboardingState(phone: string, state: Partial<OnboardingState>): Promise<void> {
+export async function setOnboardingState(userId: string, state: Partial<OnboardingState>): Promise<void> {
   const redis = getRedis();
   const flat: Record<string, string> = {};
   for (const [k, v] of Object.entries(state)) {
     if (v !== undefined) flat[k] = String(v);
   }
-  await redis.hset(onboardingKey(phone), flat);
-  await redis.expire(onboardingKey(phone), TTL_24H);
+  await redis.hset(onboardingKey(userId), flat);
+  await redis.expire(onboardingKey(userId), TTL_24H);
 }
 
-export async function deleteOnboardingState(phone: string): Promise<void> {
+export async function deleteOnboardingState(userId: string): Promise<void> {
   const redis = getRedis();
-  await redis.del(onboardingKey(phone));
+  await redis.del(onboardingKey(userId));
 }

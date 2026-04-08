@@ -2,11 +2,11 @@ import { getRedis } from "./client.js";
 import { getMealsForDate } from "./meals.js";
 import type { DailyLog } from "@caltext/shared";
 
-const dailyKey = (phone: string, localDate: string) => `daily:${phone}:${localDate}`;
+const dailyKey = (userId: string, localDate: string) => `daily:${userId}:${localDate}`;
 
-export async function updateDailyTotals(phone: string, localDate: string, addCalories: number, addProtein: number, addCarbs: number, addFat: number, addFiber: number): Promise<void> {
+export async function updateDailyTotals(userId: string, localDate: string, addCalories: number, addProtein: number, addCarbs: number, addFat: number, addFiber: number): Promise<void> {
   const redis = getRedis();
-  const key = dailyKey(phone, localDate);
+  const key = dailyKey(userId, localDate);
   const pipeline = redis.pipeline();
   pipeline.hincrbyfloat(key, "calories", addCalories);
   pipeline.hincrbyfloat(key, "protein", addProtein);
@@ -17,10 +17,10 @@ export async function updateDailyTotals(phone: string, localDate: string, addCal
   await pipeline.exec();
 }
 
-export async function getDailyLog(phone: string, localDate: string): Promise<DailyLog> {
+export async function getDailyLog(userId: string, localDate: string): Promise<DailyLog> {
   const redis = getRedis();
-  const data = await redis.hgetall<Record<string, string>>(dailyKey(phone, localDate));
-  const meals = await getMealsForDate(phone, localDate);
+  const data = await redis.hgetall<Record<string, string>>(dailyKey(userId, localDate));
+  const meals = await getMealsForDate(userId, localDate);
   return {
     calories: parseFloat(data?.calories ?? "0"),
     protein: parseFloat(data?.protein ?? "0"),
@@ -32,14 +32,14 @@ export async function getDailyLog(phone: string, localDate: string): Promise<Dai
   };
 }
 
-export async function getWeeklyLogs(phone: string, endDate: string, tz: string): Promise<{ date: string; log: DailyLog }[]> {
+export async function getWeeklyLogs(userId: string, endDate: string, tz: string): Promise<{ date: string; log: DailyLog }[]> {
   const results: { date: string; log: DailyLog }[] = [];
   const end = new Date(endDate);
   for (let i = 6; i >= 0; i--) {
     const d = new Date(end);
     d.setDate(d.getDate() - i);
     const dateStr = d.toISOString().split("T")[0]!;
-    const log = await getDailyLog(phone, dateStr);
+    const log = await getDailyLog(userId, dateStr);
     results.push({ date: dateStr, log });
   }
   return results;
