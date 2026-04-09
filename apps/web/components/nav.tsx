@@ -21,7 +21,7 @@ export function Nav() {
                   <circle cx="19.1" cy="19.1" r="2.3" fill="white"/>
                 </svg>
             </div>
-            <span className="font-body text-[1.08rem] leading-none font-semibold tracking-[-0.02em] text-primary">
+            <span className="font-body text-[1rem] leading-none font-semibold tracking-[-0.02em] text-primary">
               {t("logo")}
             </span>
           </div>
