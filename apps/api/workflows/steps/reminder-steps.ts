@@ -32,16 +32,23 @@ export async function sendMsg(userId: string, text: string) {
   const user = await getUser(userId);
   if (!user) return;
   const rawPhone = await decrypt(user.phone);
-  const { default: SendblueAPI } = await import("sendblue");
-  const client = new SendblueAPI({
-    apiKey: process.env.SENDBLUE_API_KEY!,
-    apiSecret: process.env.SENDBLUE_API_SECRET!,
+  const res = await fetch("https://api.sendblue.com/api/send-message", {
+    method: "POST",
+    headers: {
+      "Content-Type": "application/json",
+      "sb-api-key-id": process.env.SENDBLUE_API_KEY!,
+      "sb-api-secret-key": process.env.SENDBLUE_API_SECRET!,
+    },
+    body: JSON.stringify({
+      number: rawPhone,
+      from_number: process.env.SENDBLUE_FROM_NUMBER!,
+      content: text,
+    }),
   });
-  await client.messages.send({
-    number: rawPhone,
-    from_number: process.env.SENDBLUE_FROM_NUMBER!,
-    content: text,
-  });
+  if (!res.ok) {
+    const body = await res.text().catch(() => "");
+    throw new Error(`Sendblue send-message ${res.status}: ${body}`);
+  }
 }
 
 export async function generateReminder(

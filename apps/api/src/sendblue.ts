@@ -1,10 +1,23 @@
 import { env } from "@caltext/shared";
-import SendblueAPI from "sendblue";
 
-const client = new SendblueAPI({
-  apiKey: env.SENDBLUE_API_KEY,
-  apiSecret: env.SENDBLUE_API_SECRET,
-});
+const BASE = "https://api.sendblue.com/api";
+const headers = {
+  "Content-Type": "application/json",
+  "sb-api-key-id": env.SENDBLUE_API_KEY,
+  "sb-api-secret-key": env.SENDBLUE_API_SECRET,
+};
+
+async function sbPost(path: string, body: Record<string, unknown>): Promise<void> {
+  const res = await fetch(`${BASE}${path}`, {
+    method: "POST",
+    headers,
+    body: JSON.stringify(body),
+  });
+  if (!res.ok) {
+    const text = await res.text().catch(() => "");
+    throw new Error(`Sendblue ${path} ${res.status}: ${text}`);
+  }
+}
 
 // ── Webhook parsing ─────────────────────────────────────
 
@@ -37,46 +50,31 @@ export function parseInbound(headers: Headers, body: unknown): InboundMessage | 
 // ── Outbound API calls ─────────────────────────────────
 
 export async function sendMessage(phone: string, text: string): Promise<void> {
-  console.log("[sendblue] sending message", { to: phone.slice(-4), length: text.length });
-  try {
-    await client.messages.send({
-      number: phone,
-      from_number: env.SENDBLUE_FROM_NUMBER,
-      content: text,
-    });
-    console.log("[sendblue] message sent");
-  } catch (err) {
-    console.error("[sendblue] send failed", err);
-    throw err;
-  }
+  await sbPost("/send-message", {
+    number: phone,
+    from_number: env.SENDBLUE_FROM_NUMBER,
+    content: text,
+  });
 }
 
 export async function sendTyping(phone: string): Promise<void> {
   try {
-    await client.typingIndicators.send({
+    await sbPost("/send-typing-indicator", {
       number: phone,
       from_number: env.SENDBLUE_FROM_NUMBER,
     });
   } catch {
-    // typing indicator failures are not critical
+    // not critical
   }
 }
 
 export async function markRead(phone: string): Promise<void> {
   try {
-    await fetch("https://api.sendblue.com/api/mark-read", {
-      method: "POST",
-      headers: {
-        "Content-Type": "application/json",
-        "sb-api-key-id": env.SENDBLUE_API_KEY,
-        "sb-api-secret-key": env.SENDBLUE_API_SECRET,
-      },
-      body: JSON.stringify({
-        number: phone,
-        from_number: env.SENDBLUE_FROM_NUMBER,
-      }),
+    await sbPost("/mark-read", {
+      number: phone,
+      from_number: env.SENDBLUE_FROM_NUMBER,
     });
   } catch {
-    // read receipt failures are not critical
+    // not critical
   }
 }
