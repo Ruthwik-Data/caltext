@@ -22,11 +22,12 @@ export const foodIdentificationSchema = z.object({
       preparationMethod: z
         .string()
         .describe("How it appears prepared: raw, grilled, fried, boiled, etc."),
-      confidence: z.enum(["high", "medium", "low"]),
+      confidence: z.number().describe("Confidence score 0-100 based on visual clarity and portion certainty"),
       notes: z
         .string()
         .nullable()
         .describe("Anything uncertain, e.g. 'could be diet or regular'. Null if nothing to note."),
+      source: z.string().describe("Data source: 'USDA database', 'AI estimate', or 'packaged label'"),
       nutrition: z
         .object({
           calories: z.number().describe("Estimated kcal for this item at the estimated weight"),
@@ -61,11 +62,23 @@ Use visible objects as size references:
 - Standard fork = ~19cm
 - If a hand is visible, use it for scale
 
-For each item, estimate the weight in grams. Be conservative -- it's better to slightly overestimate than underestimate. If you're uncertain about an item (e.g., "is that mayo or yogurt?"), flag it with low confidence and a note.
+For each item, estimate the weight in grams. Be conservative -- it's better to slightly overestimate than underestimate.
+
+CONFIDENCE SCORING (0-100):
+- 95-100: Clear, packaged item or very obvious dish with visible reference objects
+- 80-94: Good clarity, identifiable but some portion uncertainty
+- 60-79: Unclear preparation or portion, but identifiable food
+- <60: Very ambiguous — flag with a note
+
+SOURCES:
+- Set source to "USDA database" for common prepared foods
+- Set source to "AI estimate" for custom dishes or uncertain items
+
+For each item, estimate the weight in grams. Be conservative. If you're uncertain about an item (e.g., "is that mayo or yogurt?"), flag it with <80 confidence and a note.
 
 For nutrition estimates, use your knowledge of typical nutritional values per 100g and scale to the estimated gram weight. Be accurate -- these are for calorie tracking.
 
-Return items in the "items" array with their nutrition. Leave "nutritionLabel" empty.
+Return items in the "items" array with their nutrition, confidence (0-100), and source. Leave "nutritionLabel" empty.
 
 MODE 2 — PACKAGED PRODUCT (bottle, can, box, jar, bag, protein bar, etc.):
 If you see a packaged food or drink product:
@@ -73,7 +86,8 @@ If you see a packaged food or drink product:
 - If a nutrition facts label is visible, read the EXACT values printed on it: calories, protein, carbs, fat, fiber, and serving size
 - Convert the serving size to grams (e.g. "250ml milk" ≈ 258g, "1 bar (40g)" = 40g)
 - Return these in the "nutritionLabel" field. Leave the "items" array empty.
-- If the nutrition label is not visible or too blurry to read, identify the product by name and return it as a single item in the "items" array with your best weight and nutrition estimate.
+- Confidence is always 95+ for label reads.
+- If the nutrition label is not visible or too blurry to read, identify the product by name and return it as a single item in the "items" array with your best weight and nutrition estimate (confidence <80, source "AI estimate").
 
 Return your analysis as structured JSON.`;
 
@@ -125,6 +139,7 @@ export function createIdentifyFoodTool(contextImageUrl?: string) {
             grams: i.estimatedGrams,
             prep: i.preparationMethod,
             confidence: i.confidence,
+            source: i.source,
             kcal: i.nutrition.calories,
             p: i.nutrition.protein,
             c: i.nutrition.carbs,
