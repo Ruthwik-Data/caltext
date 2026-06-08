@@ -1,5 +1,4 @@
 {
-  "regions": ["iad1", "fra1", "hnd1"],
   "installCommand": "",
   "buildCommand": "turbo build --filter=@caltext/api",
   "outputDirectory": "apps/api/.output",
