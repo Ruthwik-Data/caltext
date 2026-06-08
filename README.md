@@ -90,3 +90,28 @@ caltext/
 7. Daily reminders at breakfast/lunch/dinner times (timezone-aware)
 8. End-of-day summaries with calorie/macro breakdown
 9. Weekly recaps with progress bars and trends
+
+## Recent Improvements (2026-06-08)
+
+### 1. Confidence Scoring
+- Food identification now includes **0-100 confidence scores** per item
+- Users see exactly how certain the AI is: "94% confident" for clear items, "60% confident" for ambiguous ones
+- Low confidence items are flagged with notes: "Not 100% sure on that one — let me know if the portion's off"
+
+### 2. Supportive Tone + Trust Signals
+- Changed personality from "chill and minimal" → **"expert + supportive coach"**
+- Responses now include trust cues and transparent reasoning
+- When users are over target: facts without shame ("You're at 1,850 / 2,329 kcal. That happens — keep going")
+- New CTA: "Looks good? Or adjust portion." (vs old "Log it?")
+
+### 3. Personalized Suggestions
+- After logging meals, users get **1 smart suggestion** based on their eating patterns
+- Example: "Your breakfasts are usually high carb. Try adding protein next time — eggs or Greek yogurt work great."
+- Only shown when a pattern is detected (not just generic advice)
+- Analyzed from last 3 meals today
+
+### 4. Source Attribution
+- Food data now shows where it came from: "USDA database", "AI estimate", "packaged label"
+- Builds transparency and trust in the data
+
+**Impact:** Users feel more confident in the tracking, trust the AI more, and get personalized guidance to improve their habits.
