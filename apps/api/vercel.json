@@ -1,5 +1,5 @@
 {
   "installCommand": "npm install --legacy-peer-deps",
-  "buildCommand": "cd ../.. && npm run build --workspaces --if-present",
+  "buildCommand": "npm run build",
   "outputDirectory": ".output"
 }
