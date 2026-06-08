@@ -1,7 +1,8 @@
 {
-  "buildCommand": "cd apps/api && npm install --legacy-peer-deps && npm run build",
-  "outputDirectory": "apps/api/.output",
-  "installCommand": "",
   "regions": ["iad1", "fra1", "hnd1"],
+  "installCommand": "",
+  "buildCommand": "turbo build --filter=@caltext/api",
+  "outputDirectory": "apps/api/.output",
+  "ignoreCommand": "exit 0",
   "bunVersion": "1.x"
 }
