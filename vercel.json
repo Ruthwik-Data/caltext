@@ -1,5 +1,7 @@
 {
-  "buildCommand": "turbo build --filter=@caltext/web",
-  "outputDirectory": "apps/web/.next",
-  "installCommand": "npm install --legacy-peer-deps"
+  "buildCommand": "cd apps/api && npm install --legacy-peer-deps && npm run build",
+  "outputDirectory": "apps/api/.output",
+  "installCommand": "",
+  "regions": ["iad1", "fra1", "hnd1"],
+  "bunVersion": "1.x"
 }
