@@ -2,6 +2,5 @@
   "installCommand": "",
   "buildCommand": "turbo build --filter=@caltext/api",
   "outputDirectory": "apps/api/.output",
-  "ignoreCommand": "exit 0",
   "bunVersion": "1.x"
 }
