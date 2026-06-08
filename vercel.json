@@ -1,6 +1,0 @@
-{
-  "installCommand": "",
-  "buildCommand": "cd ../.. && npm run build --workspace=@caltext/api",
-  "outputDirectory": ".output",
-  "ignoreCommand": "exit 0"
-}
