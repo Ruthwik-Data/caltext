@@ -1,6 +1,5 @@
 {
-  "installCommand": "",
-  "buildCommand": "cd ../.. && turbo build --filter=@caltext/api",
-  "outputDirectory": ".output",
-  "bunVersion": "1.x"
+  "installCommand": "npm install --legacy-peer-deps",
+  "buildCommand": "cd ../.. && npm run build --workspaces --if-present",
+  "outputDirectory": ".output"
 }
