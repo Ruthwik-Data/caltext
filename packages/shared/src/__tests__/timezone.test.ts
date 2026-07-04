@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 import { isDayOfWeek, localDateString, localHour, msUntil, nextLocalTime } from "../timezone";
 
 describe("localDateString", () => {

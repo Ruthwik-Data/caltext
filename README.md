@@ -4,20 +4,20 @@ iMessage calorie tracking assistant powered by AI.
 
 ## Stack
 
-- **Runtime**: Bun + Turborepo monorepo
-- **API**: Hono on Nitro (deployed to Vercel, 3 regions)
+- **Runtime**: Node + Turborepo monorepo (npm)
+- **API**: Hono on Nitro (deployed to Vercel via the Build Output API)
 - **iMessage**: Chat SDK + Sendblue adapter
 - **AI**: AI SDK v6 + GPT-4.1 (vision + agent)
-- **Database**: Upstash Redis (global, 3 regions)
+- **Database**: Upstash Redis
 - **Workflows**: Vercel Workflow SDK for durable pipelines
-- **Nutrition**: USDA FoodData Central API
+- **Nutrition**: GPT-4.1 estimates, tagged with a source label (AI estimate / packaged label)
 
 ## Setup
 
 ### 1. Install dependencies
 
 ```bash
-bun install
+npm install --legacy-peer-deps
 ```
 
 ### 2. Configure environment
@@ -35,21 +35,24 @@ Fill in the required keys:
 | `UPSTASH_REDIS_REST_URL` / `UPSTASH_REDIS_REST_TOKEN` | [console.upstash.com](https://console.upstash.com) |
 | `REDIS_URL` | Same Upstash Redis in `redis://` format |
 | `OPENAI_API_KEY` | [platform.openai.com](https://platform.openai.com) |
-| `USDA_API_KEY` | [fdc.nal.usda.gov](https://fdc.nal.usda.gov/api-key-signup.html) (free) |
+| `ENCRYPTION_KEY` | 64-char hex, generate with `openssl rand -hex 32` |
 
 ### 3. Run locally
 
 ```bash
-bun run dev
+npm run dev
 ```
 
 ### 4. Deploy to Vercel
 
+The API uses Nitro's `vercel` preset, which emits Vercel's Build Output API to `apps/api/.vercel/output`. Build locally, then deploy the prebuilt output:
+
 ```bash
-vercel deploy
+npm run build --workspace=@caltext/api
+cd apps/api && vercel deploy --prebuilt
 ```
 
-Deploys to 3 regions: US East (iad1), London (lhr1), Tokyo (hnd1).
+> The webhook endpoint must be publicly reachable, so disable Vercel Deployment Protection for the project (the app authenticates callers via `SENDBLUE_WEBHOOK_SECRET`).
 
 ### 5. Set Sendblue webhook
 
@@ -85,8 +88,8 @@ caltext/
 2. Sendblue forwards the message via webhook
 3. New users go through conversational onboarding (name, stats, goal)
 4. Returning users interact with the AI assistant
-5. Photos are analyzed with GPT-4.1 vision, then grounded in USDA nutrition data
-6. Text descriptions are matched against USDA database directly
+5. Photos are analyzed with GPT-4.1 vision, which estimates each item's portion and nutrition with a confidence score
+6. Text descriptions are estimated the same way, tagged with a source label (AI estimate / packaged label)
 7. Daily reminders at breakfast/lunch/dinner times (timezone-aware)
 8. End-of-day summaries with calorie/macro breakdown
 9. Weekly recaps with progress bars and trends

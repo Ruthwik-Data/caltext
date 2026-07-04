@@ -14,7 +14,7 @@
   "scripts": {
     "build": "tsup",
     "typecheck": "tsc --noEmit",
-    "test": "bun test"
+    "test": "vitest run --passWithNoTests"
   },
   "dependencies": {
     "@caltext/shared": "*",

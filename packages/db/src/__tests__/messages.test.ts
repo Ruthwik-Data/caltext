@@ -1,26 +1,30 @@
-import { describe, expect, mock, test } from "bun:test";
+import { describe, expect, test, vi } from "vitest";
 
-const store: Record<string, string> = {};
+const { mockRedis } = vi.hoisted(() => {
+  const store: Record<string, string> = {};
 
-const mockRedis = {
-  set: mock((key: string, value: string) => {
-    store[key] = value;
-    return Promise.resolve("OK");
-  }),
-  get: mock((key: string) => {
-    return Promise.resolve(store[key] ?? null);
-  }),
-  del: mock((key: string) => {
-    delete store[key];
-    return Promise.resolve(1);
-  }),
-};
+  const mockRedis = {
+    set: vi.fn((key: string, value: string) => {
+      store[key] = value;
+      return Promise.resolve("OK");
+    }),
+    get: vi.fn((key: string) => {
+      return Promise.resolve(store[key] ?? null);
+    }),
+    del: vi.fn((key: string) => {
+      delete store[key];
+      return Promise.resolve(1);
+    }),
+  };
 
-mock.module("../client", () => ({
+  return { mockRedis };
+});
+
+vi.mock("../client", () => ({
   getRedis: () => mockRedis,
 }));
 
-mock.module("@caltext/shared", () => ({
+vi.mock("@caltext/shared", () => ({
   env: {},
   encryptContent: async (s: string) => `enc:${s}`,
   decrypt: async (s: string) => {

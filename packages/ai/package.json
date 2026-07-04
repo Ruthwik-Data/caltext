@@ -14,7 +14,7 @@
   "scripts": {
     "build": "tsup",
     "typecheck": "tsc --noEmit",
-    "test": "bun test"
+    "test": "vitest run"
   },
   "dependencies": {
     "@ai-sdk/openai": "^3.0.52",

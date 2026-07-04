@@ -48,6 +48,7 @@
       "!**/node_modules",
       "!**/.next",
       "!**/.output",
+      "!**/.vercel",
       "!**/dist",
       "!**/.turbo",
       "!**/bun.lock",

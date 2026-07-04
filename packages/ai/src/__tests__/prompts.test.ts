@@ -1,6 +1,6 @@
-import { describe, expect, mock, test } from "bun:test";
+import { describe, expect, test, vi } from "vitest";
 
-mock.module("@caltext/shared", () => ({
+vi.mock("@caltext/shared", () => ({
   getLocaleName: (locale: string) => {
     const names: Record<string, string> = { en: "English", sv: "Swedish" };
     return names[locale] ?? "English";
@@ -8,8 +8,12 @@ mock.module("@caltext/shared", () => ({
   DEFAULT_WATER_TARGET_ML: 2500,
 }));
 
-const { buildDailySummaryPrompt, buildReminderPrompt, buildSystemPrompt, buildWeeklyRecapPrompt } =
-  await import("../prompts");
+import {
+  buildDailySummaryPrompt,
+  buildReminderPrompt,
+  buildSystemPrompt,
+  buildWeeklyRecapPrompt,
+} from "../prompts";
 
 const baseProfile = {
   id: "usr_test123",
@@ -55,7 +59,7 @@ describe("buildSystemPrompt", () => {
     const prompt = buildSystemPrompt(makeContext());
     expect(prompt).toContain("Caltext");
     expect(prompt).toContain("English");
-    expect(prompt).toContain("Chill and minimal");
+    expect(prompt).toContain("Expert + supportive");
   });
 
   test("includes user profile when present", () => {
@@ -117,7 +121,7 @@ describe("buildSystemPrompt", () => {
 
   test("includes confirmation step instructions", () => {
     const prompt = buildSystemPrompt(makeContext());
-    expect(prompt).toContain("Log it?");
+    expect(prompt).toContain("Looks good?");
     expect(prompt).toContain("logMeal");
   });
 
