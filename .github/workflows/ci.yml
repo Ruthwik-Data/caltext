@@ -30,7 +30,7 @@ jobs:
   deploy-web:
     needs: ci
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.ENABLE_VERCEL_DEPLOY == 'true'
     env:
       VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
       VERCEL_PROJECT_ID: ${{ secrets.VERCEL_WEB_PROJECT_ID }}
@@ -59,7 +59,7 @@ jobs:
   deploy-api:
     needs: ci
     runs-on: ubuntu-latest
-    if: github.event_name == 'push' && github.ref == 'refs/heads/main'
+    if: github.event_name == 'push' && github.ref == 'refs/heads/main' && vars.ENABLE_VERCEL_DEPLOY == 'true'
     env:
       VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
       VERCEL_PROJECT_ID: ${{ secrets.VERCEL_API_PROJECT_ID }}
@@ -88,7 +88,7 @@ jobs:
   deploy-preview:
     needs: ci
     runs-on: ubuntu-latest
-    if: github.event_name == 'pull_request'
+    if: github.event_name == 'pull_request' && vars.ENABLE_VERCEL_DEPLOY == 'true'
     env:
       VERCEL_ORG_ID: ${{ secrets.VERCEL_ORG_ID }}
       VERCEL_PROJECT_ID: ${{ secrets.VERCEL_WEB_PROJECT_ID }}
