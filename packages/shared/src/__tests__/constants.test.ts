@@ -1,4 +1,4 @@
-import { describe, expect, test } from "bun:test";
+import { describe, expect, test } from "vitest";
 import { calculateBMR, calculateTDEE, MAX_DAILY_CALORIES, MIN_DAILY_CALORIES } from "../constants";
 
 describe("calculateBMR (Mifflin-St Jeor)", () => {

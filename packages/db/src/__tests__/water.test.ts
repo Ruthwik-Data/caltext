@@ -1,38 +1,42 @@
-import { describe, expect, mock, test } from "bun:test";
+import { describe, expect, test, vi } from "vitest";
 
-const waterStore: Record<string, Record<string, string>> = {};
+const { mockRedis } = vi.hoisted(() => {
+  const waterStore: Record<string, Record<string, string>> = {};
 
-const mockRedis = {
-  hincrbyfloat: mock((key: string, field: string, value: number) => {
-    if (!waterStore[key]) waterStore[key] = {};
-    const current = parseFloat(waterStore[key][field] ?? "0");
-    waterStore[key][field] = String(current + value);
-    return Promise.resolve(current + value);
-  }),
-  hgetall: mock((key: string) => {
-    return Promise.resolve(waterStore[key] ?? null);
-  }),
-  pipeline: () => {
-    const ops: (() => Promise<unknown>)[] = [];
-    const p = {
-      hincrbyfloat(key: string, field: string, value: number) {
-        ops.push(() => mockRedis.hincrbyfloat(key, field, value));
-        return p;
-      },
-      expire() {
-        return p;
-      },
-      exec: () => Promise.all(ops.map((fn) => fn())),
-    };
-    return p;
-  },
-};
+  const mockRedis = {
+    hincrbyfloat: vi.fn((key: string, field: string, value: number) => {
+      if (!waterStore[key]) waterStore[key] = {};
+      const current = parseFloat(waterStore[key][field] ?? "0");
+      waterStore[key][field] = String(current + value);
+      return Promise.resolve(current + value);
+    }),
+    hgetall: vi.fn((key: string) => {
+      return Promise.resolve(waterStore[key] ?? null);
+    }),
+    pipeline: () => {
+      const ops: (() => Promise<unknown>)[] = [];
+      const p = {
+        hincrbyfloat(key: string, field: string, value: number) {
+          ops.push(() => mockRedis.hincrbyfloat(key, field, value));
+          return p;
+        },
+        expire() {
+          return p;
+        },
+        exec: () => Promise.all(ops.map((fn) => fn())),
+      };
+      return p;
+    },
+  };
 
-mock.module("../client", () => ({
+  return { mockRedis };
+});
+
+vi.mock("../client", () => ({
   getRedis: () => mockRedis,
 }));
 
-mock.module("@caltext/shared", () => ({
+vi.mock("@caltext/shared", () => ({
   env: {},
 }));
 

@@ -1,28 +1,32 @@
-import { describe, expect, mock, test } from "bun:test";
+import { describe, expect, test, vi } from "vitest";
 
-const weightStore: Record<string, { score: number; member: string }[]> = {};
+const { mockRedis } = vi.hoisted(() => {
+  const weightStore: Record<string, { score: number; member: string }[]> = {};
 
-const mockRedis = {
-  zadd: mock((key: string, entry: { score: number; member: string }) => {
-    if (!weightStore[key]) weightStore[key] = [];
-    weightStore[key].push(entry);
-    weightStore[key].sort((a, b) => b.score - a.score);
-    return Promise.resolve(1);
-  }),
-  zrange: mock((key: string, _start: number, _end: number, opts?: { rev: boolean }) => {
-    if (!weightStore[key]) return Promise.resolve([]);
-    const entries = weightStore[key].map((e) => e.member);
-    if (opts?.rev) return Promise.resolve(entries);
-    return Promise.resolve(entries.reverse());
-  }),
-  del: mock(() => Promise.resolve(1)),
-};
+  const mockRedis = {
+    zadd: vi.fn((key: string, entry: { score: number; member: string }) => {
+      if (!weightStore[key]) weightStore[key] = [];
+      weightStore[key].push(entry);
+      weightStore[key].sort((a, b) => b.score - a.score);
+      return Promise.resolve(1);
+    }),
+    zrange: vi.fn((key: string, _start: number, _end: number, opts?: { rev: boolean }) => {
+      if (!weightStore[key]) return Promise.resolve([]);
+      const entries = weightStore[key].map((e) => e.member);
+      if (opts?.rev) return Promise.resolve(entries);
+      return Promise.resolve(entries.reverse());
+    }),
+    del: vi.fn(() => Promise.resolve(1)),
+  };
 
-mock.module("../client", () => ({
+  return { mockRedis };
+});
+
+vi.mock("../client", () => ({
   getRedis: () => mockRedis,
 }));
 
-mock.module("@caltext/shared", () => ({
+vi.mock("@caltext/shared", () => ({
   env: {},
   encryptContent: async (s: string) => `enc:${s}`,
   decrypt: async (s: string) => {

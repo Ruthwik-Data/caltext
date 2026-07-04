@@ -22,12 +22,16 @@ export const foodIdentificationSchema = z.object({
       preparationMethod: z
         .string()
         .describe("How it appears prepared: raw, grilled, fried, boiled, etc."),
-      confidence: z.number().describe("Confidence score 0-100 based on visual clarity and portion certainty"),
+      confidence: z
+        .number()
+        .describe("Confidence score 0-100 based on visual clarity and portion certainty"),
       notes: z
         .string()
         .nullable()
         .describe("Anything uncertain, e.g. 'could be diet or regular'. Null if nothing to note."),
-      source: z.string().describe("Data source: 'USDA database', 'AI estimate', or 'packaged label'"),
+      source: z
+        .string()
+        .describe("Data source: 'USDA database', 'AI estimate', or 'packaged label'"),
       nutrition: z
         .object({
           calories: z.number().describe("Estimated kcal for this item at the estimated weight"),

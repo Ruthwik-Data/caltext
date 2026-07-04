@@ -1,15 +1,17 @@
-import { describe, expect, mock, test } from "bun:test";
+import { describe, expect, test, vi } from "vitest";
 
-const mockRedis = {
-  hgetall: mock(() => Promise.resolve(null)),
-  zrange: mock(() => Promise.resolve([])),
-};
+const { mockRedis } = vi.hoisted(() => ({
+  mockRedis: {
+    hgetall: vi.fn(() => Promise.resolve(null)),
+    zrange: vi.fn(() => Promise.resolve([])),
+  },
+}));
 
-mock.module("../client", () => ({
+vi.mock("../client", () => ({
   getRedis: () => mockRedis,
 }));
 
-mock.module("@caltext/shared", () => ({
+vi.mock("@caltext/shared", () => ({
   env: {},
 }));
 
